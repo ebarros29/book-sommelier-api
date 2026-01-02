@@ -1,0 +1,16 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+data/*.csv
+data/*.sqlite
+data/*.json
+
+# IDEs e Editores
+.vscode/
+.idea/
+*.swp
+
+# Poetry
+.python-version
