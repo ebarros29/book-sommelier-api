@@ -18,7 +18,7 @@ class BookScraper():
 
     def get_soup(self, url):
         """
-        método auxiliar para evitar repetição de código de request
+        Auxiliary method to avoid repeating request code.
         """
         response = requests.get(url, headers=self.headers)
 
@@ -29,7 +29,7 @@ class BookScraper():
 
     def set_last_page_number(self):
         """
-        Extrai o número da última página
+        Extract the number from the last page.
         """
         soup = self.get_soup(self.start_url)
         
@@ -57,12 +57,7 @@ class BookScraper():
 
                 self._books_urls.append(relative_url)
     
-    def _parse_price_string(self, price_raw: str):
-        """
-        Input: "£51.77"
-        Output: ("£", 5177)
-        """
-        
+    def _parse_price_string(self, price_raw: str):        
         currency_maps = {
             "£": "GBP",
             "€": "EUR",
@@ -86,21 +81,21 @@ class BookScraper():
     
     def _find_book_title(self, soup: BeautifulSoup):
         """
-        Obtem o título do livro
+        Get the book title.
         """
         product_main = soup.find("div", class_="product_main")
         return product_main.h1.text.strip()
     
     def _find_book_price(self, soup: BeautifulSoup):
         """
-        Obtem o preço do livro
+        Get the price of the book.
         """
         price = soup.find("p", class_="price_color")
         return self._parse_price_string(price.text)
     
     def _find_book_rating(self, soup: BeautifulSoup):
         """
-        Obtem a avaliação
+        Get the evaluation
         """
         rating_map = {
             "One": 1,
@@ -121,7 +116,7 @@ class BookScraper():
                 
     def _find_book_category(self, soup: BeautifulSoup):
         """
-        Obtem a categoria
+        Get the category
         """
         
         breadcrumb = soup.find('ul', class_="breadcrumb")
@@ -131,7 +126,7 @@ class BookScraper():
     
     def _find_book_image(self, soup: BeautifulSoup):
         """
-        Obtem a url da imagem
+        Get the image URL.
         """
         product_gallery = soup.find("div", id="product_gallery")
     
@@ -174,7 +169,7 @@ class BookScraper():
             
     def run(self):
         """
-        Fluxo principal de execução
+        Main execution flow
         """
         self.set_last_page_number()
         self.get_all_books_urls()
