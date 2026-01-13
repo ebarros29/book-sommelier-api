@@ -1,16 +1,16 @@
 # Base image of Python 3.12
 FROM python:3.12-slim
 
-# Define environment variables to avoid .pyc files and log buffers.
+# Define environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Defines the working directory.
 WORKDIR /app
 
-# Installs system dependencies.
+# Installs system dependencies para MySQL
 RUN apt-get update && apt-get install -y \
-    libpq-dev \
+    default-libmysqlclient-dev \
+    pkg-config \
     gcc \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -18,21 +18,20 @@ RUN apt-get update && apt-get install -y \
 # Install Poetry
 RUN pip install poetry
 
-# Copy only the Poetry configuration files first (improves Docker caching).
+# Copy only the Poetry configuration files
 COPY pyproject.toml poetry.lock* ./
 
-# Configure Poetry to install dependencies in the global Python container.
+# Configure Poetry
 RUN poetry config virtualenvs.create false \
+    && poetry lock \
     && poetry install --no-interaction --no-ansi --no-root
 
-# Copy the rest of the code to the container.
+# Copy the rest of the code
 COPY . .
 
-# Expose the port (Flask uses 5000 by default, but you can keep it at 8000 if you prefer).
 EXPOSE 8000
 
-# Environment variable for Flask
 ENV FLASK_APP=api/main.py
 
-# Command to run: Scraper -> Loader -> API
-CMD ["sh", "-c", "python scripts/scraper.py && python scripts/loader.py && gunicorn --bind 0.0.0.0:8000 api.main:app"]
+# Command to run -> API
+CMD ["sh", "-c", "alembic upgrade head && gunicorn --bind 0.0.0.0:8000 api.main:app"]

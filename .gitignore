@@ -14,3 +14,7 @@ data/*.json
 
 # Poetry
 .python-version
+
+# Environment variables
+.env
+.env.*
