@@ -1,4 +1,7 @@
+import logging
 from typing import Iterable, Optional, Set
+
+from sqlalchemy import text
 
 from api.extensions import db
 from api.models.book import Book
@@ -41,3 +44,19 @@ class BookRepository:
     def bulk_insert(self, books: Iterable[Book]) -> None:
         db.session.add_all(books)
         db.session.commit()
+
+    def get_by_id(self, book_id: int) -> Optional[Book]:
+        return Book.query.get(book_id)
+
+    def list_categories(self) -> list[str]:
+        rows = db.session.query(Book.category).distinct().order_by(Book.category).all()
+        return [c for (c,) in rows if c]
+
+    def is_db_connected(self) -> bool:
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            return True
+        except Exception:
+            logging.exception("Database health check failed")
+            return False

@@ -100,3 +100,51 @@ def search_books():
         ),
         200,
     )
+
+
+@book_bp.route("/books/<int:book_id>", methods=["GET"])
+def get_book(book_id: int):
+    repository = BookRepository()
+    b = repository.get_by_id(book_id)
+
+    if not b:
+        return jsonify({"error": "Book not found"}), 404
+
+    return (
+        jsonify(
+            {
+                "id": b.id,
+                "title": b.title,
+                "price": b.price / 100,
+                "currency": b.currency,
+                "rating": b.rating,
+                "category": b.category,
+                "img_url": b.img_url,
+                "url": b.url,
+            }
+        ),
+        200,
+    )
+
+
+@book_bp.route("/categories", methods=["GET"])
+def get_categories():
+    repository = BookRepository()
+    categories = repository.list_categories()
+    return jsonify({"categories": categories}), 200
+
+
+@book_bp.route("/health", methods=["GET"])
+def health():
+    repository = BookRepository()
+    db_ok = repository.is_db_connected()
+
+    status = "healthy" if db_ok else "unhealthy"
+    code = 200 if db_ok else 500
+
+    return (
+        jsonify(
+            {"status": status, "database": "connected" if db_ok else "disconnected"}
+        ),
+        code,
+    )
