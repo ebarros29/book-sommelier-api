@@ -67,7 +67,7 @@ pip install -r requirements.txt
 
 ---
 
-## 🕷️ Run Web Scraping
+## Run Web Scraping
 
 ```bash
 python3 scripts/scraper.py
@@ -95,7 +95,7 @@ http://localhost:8000
 
 ---
 
-## 🔌 API Endpoints
+## API Endpoints
 
 ### Core Endpoints
 
@@ -109,22 +109,13 @@ http://localhost:8000
 
 ### Example
 
-```http
-GET /api/v1/books/search?category=Travel
-```
+Interactive API documentation is available via Swagger UI. Open the docs in your browser after the server starts:
 
-Response:
+- Swagger UI: http://localhost:8000/docs
+  - Also available on [/docs](./docs/)
+- OpenAPI (JSON): http://localhost:8000/swagger.json
 
-```json
-{
-  "id": 12,
-  "title": "It's Only the Himalayas",
-  "price": 45.17,
-  "rating": 2,
-  "availability": "In stock",
-  "category": "Travel"
-}
-```
+Use the Swagger UI to try requests like `GET /api/v1/books/search` with query parameters such as `category`, `title`, `min_rating`, and `max_price`.
 
 ---
 
