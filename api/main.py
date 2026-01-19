@@ -14,7 +14,7 @@ def create_app():
     
 
     if not database_url:
-        print("Aviso: DATABASE_URL não definida. Usando SQLite temporário.")
+        print("DATABASE_URL not defined. Using temp SQLite instead.")
         database_url = "sqlite:///temp.db"
 
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
