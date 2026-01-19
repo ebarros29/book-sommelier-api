@@ -8,9 +8,8 @@ ENV PYTHONPATH=/app
 
 WORKDIR /app
 
-# Installs system dependencies para MySQL
 RUN apt-get update && apt-get install -y \
-    default-libmysqlclient-dev \
+    libpq-dev \
     pkg-config \
     gcc \
     curl \
@@ -24,7 +23,6 @@ COPY pyproject.toml poetry.lock* ./
 
 # Configure Poetry
 RUN poetry config virtualenvs.create false \
-    && poetry lock \
     && poetry install --no-interaction --no-ansi --no-root
 
 # Copy the rest of the code
