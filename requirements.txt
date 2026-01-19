@@ -8,6 +8,7 @@ mysqlclient==2.2.7
 pandas==2.2.0
 python-dotenv==1.2.1
 requests==2.31.0
+PyYAML==6.0.3
 
 # Development dependencies
 pytest==8.0.0

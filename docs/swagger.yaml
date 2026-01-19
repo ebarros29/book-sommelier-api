@@ -1,0 +1,174 @@
+openapi: 3.0.3
+info:
+  title: Book Sommelier API
+  version: "1.0.0"
+  description: API for browsing and searching scraped books
+servers:
+  - url: /
+paths:
+  /api/v1/books:
+    get:
+      summary: List books (paginated)
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+            default: 25
+      responses:
+        '200':
+          description: A paginated list of books
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooksResponse'
+
+  /api/v1/books/{id}:
+    get:
+      summary: Get a book by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Book details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '404':
+          description: Book not found
+
+  /api/v1/books/search:
+    get:
+      summary: Search for books
+      parameters:
+        - in: query
+          name: title
+          schema:
+            type: string
+        - in: query
+          name: category
+          schema:
+            type: string
+        - in: query
+          name: min_rating
+          schema:
+            type: number
+            format: float
+        - in: query
+          name: max_price
+          schema:
+            type: number
+            format: float
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+            default: 25
+      responses:
+        '200':
+          description: Search results (paginated)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooksResponse'
+
+  /api/v1/categories:
+    get:
+      summary: List distinct book categories
+      responses:
+        '200':
+          description: Categories list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      type: string
+
+  /api/v1/health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '500':
+          description: Service unhealthy
+
+components:
+  schemas:
+    Book:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        price:
+          type: number
+          format: float
+        currency:
+          type: string
+        rating:
+          type: number
+        category:
+          type: string
+        img_url:
+          type: string
+        url:
+          type: string
+
+    Meta:
+      type: object
+      properties:
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total_pages:
+          type: integer
+        total_items:
+          type: integer
+        has_next:
+          type: boolean
+        has_prev:
+          type: boolean
+
+    BooksResponse:
+      type: object
+      properties:
+        books:
+          type: array
+          items:
+            $ref: '#/components/schemas/Book'
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        database:
+          type: string
