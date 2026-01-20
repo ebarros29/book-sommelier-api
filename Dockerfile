@@ -28,9 +28,10 @@ RUN poetry config virtualenvs.create false \
 # Copy the rest of the code
 COPY . .
 
-EXPOSE 8000
+RUN mkdir -p /app/data
 
+EXPOSE 8000
 ENV FLASK_APP=api/main.py
 
 # Command to run: Migrations -> Insert Books -> API
-CMD ["sh", "-c", "alembic upgrade head && python scripts/insert_books.py && gunicorn --bind 0.0.0.0:8000 api.main:app"]
+CMD ["sh", "-c", "alembic upgrade head; python scripts/insert_books.py; gunicorn --bind 0.0.0.0:8000 api.main:app"]

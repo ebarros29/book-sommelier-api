@@ -1,13 +1,18 @@
+import os
+import sys
 from pathlib import Path
-
 from api.main import create_app
 from api.repositories.book_repository import BookRepository
 from api.services.book_import_service import BookImportService
 
-CSV_PATH = Path("data/books.csv")
-
+BASE_DIR = Path(__file__).resolve().parent.parent
+CSV_PATH = BASE_DIR / "data" / "books.csv"
 
 def main() -> None:
+    if not CSV_PATH.exists():
+        print(f"Skip: File '{CSV_PATH}' not found. Scraping needed.")
+        sys.exit(0)
+        
     app = create_app()
 
     with app.app_context():
