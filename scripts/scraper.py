@@ -3,8 +3,9 @@ from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
-from storageInterface import DataStorage
-from writer import CSVWriter
+
+from scripts.storageInterface import DataStorage
+from scripts.writer import CSVWriter
 
 
 class BookScraper:

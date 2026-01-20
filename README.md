@@ -119,6 +119,64 @@ Use the Swagger UI to try requests like `GET /api/v1/books/search` with query pa
 
 ---
 
+## Authentication (Admin)
+
+The project includes simple JWT-based authentication to protect admin routes (scraping/import). Credentials and secrets are configured via environment variables.
+
+- Admin credentials (defaults):
+  - `ADMIN_USERNAME` (default: `admin`)
+  - `ADMIN_PASSWORD` (default: `password`)
+- JWT secret: `JWT_SECRET_KEY` (default: generated fallback in app)
+
+### Endpoints
+
+| Method | Endpoint                         | Description |
+| ------ | -------------------------------- | ----------- |
+| POST   | `/api/v1/auth/login`             | Obtain `access_token` and `refresh_token` by posting JSON `{ "username": "...", "password": "..." }` |
+| POST   | `/api/v1/auth/refresh`           | Exchange a `refresh_token` for a new `access_token` by posting JSON `{ "refresh_token": "..." }` |
+
+Protected admin routes (require `Authorization: Bearer <access_token>`):
+
+| Method | Endpoint                        | Description |
+| ------ | ------------------------------- | ----------- |
+| POST   | `/api/v1/scraping/trigger`      | Start scraping (background) |
+| POST   | `/api/v1/scraping/import`       | Import CSV into DB (background) |
+| GET    | `/api/v1/scraping/trigger/status` | Scraping status |
+| GET    | `/api/v1/scraping/import/status`  | Import status |
+
+### Examples
+
+1) Login to obtain tokens:
+
+```bash
+curl -s -X POST http://localhost:8000/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"password"}'
+
+# Response: {"access_token":"...","refresh_token":"..."}
+```
+
+2) Use access token to trigger import:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/scraping/import \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+3) Refresh access token:
+
+```bash
+curl -s -X POST http://localhost:8000/api/v1/auth/refresh \
+  -H 'Content-Type: application/json' \
+  -d '{"refresh_token":"<REFRESH_TOKEN>"}'
+
+# Response: {"access_token":"..."}
+```
+
+Note: This is a minimal auth implementation intended for development. For production, replace with a proper user store, secure secrets management, HTTPS, and token revocation.
+
+---
+
 ## ML-Ready Vision
 
 The API was designed to support future ML workflows:
