@@ -8,9 +8,8 @@ ENV PYTHONPATH=/app
 
 WORKDIR /app
 
-# Installs system dependencies para MySQL
 RUN apt-get update && apt-get install -y \
-    default-libmysqlclient-dev \
+    libpq-dev \
     pkg-config \
     gcc \
     curl \
@@ -24,15 +23,15 @@ COPY pyproject.toml poetry.lock* ./
 
 # Configure Poetry
 RUN poetry config virtualenvs.create false \
-    && poetry lock \
     && poetry install --no-interaction --no-ansi --no-root
 
 # Copy the rest of the code
 COPY . .
 
-EXPOSE 8000
+RUN mkdir -p /app/data
 
+EXPOSE 8000
 ENV FLASK_APP=api/main.py
 
 # Command to run: Migrations -> Insert Books -> API
-CMD ["sh", "-c", "alembic upgrade head && python scripts/insert_books.py && gunicorn --bind 0.0.0.0:8000 api.main:app"]
+CMD ["sh", "-c", "alembic upgrade head; python scripts/insert_books.py; gunicorn --bind 0.0.0.0:8000 api.main:app"]
