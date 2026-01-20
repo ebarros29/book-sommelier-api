@@ -1,223 +1,232 @@
 # Documentação da Arquitetura
 
-## 1. Objetivo
+Este documento descreve a arquitetura do projeto **Book Recommendation Data API**, focando nas decisões de arquitetura, no fluxo de dados ponta a ponta, na preparação para escalabilidade futura e na integração com modelos de Machine Learning.
 
-Este documento descreve a arquitetura do projeto **Book Recommendation Data API**, focando nas decisões arquiteturais, no fluxo de dados ponta a ponta, na preparação para escalabilidade futura e na integração com modelos de Machine Learning.
+## 1. 🌐 Visão Geral
+Book Sommelier API é uma plataforma construída com Python e Flask que realiza:
+1. Coleta de dados por Web Scraping
+2. Armazenamento dos livros em CSV e banco de dados
+3. Exposição de uma API REST para consultas e análises
+4. Preparação para pipelines de Machine Learning (recomendações, análises de preço, NLP etc.)
 
-Detalhes operacionais, instruções de execução, exemplos de uso da API e orientações para desenvolvedores estão intencionalmente fora deste documento e são tratados no arquivo `README.md`.
+O projeto segue uma arquitetura organizada em Pipeline → API → Consumo permitindo fácil evolução e escalabilidade.
 
-## 2. Visão Geral da Arquitetura
+## 2. 🧩 Pipeline: Ingestão → Processamento → API → Consumo
+O pipeline do Book Sommelier API garante a coleta, padronização, armazenamento e disponibilização dos dados de livros para aplicações, análises e modelos de machine learning. Ele é composto por quatro etapas, cada uma com responsabilidades bem definidas, componentes específicos e padrões arquiteturais próprios.
+A seguir, cada etapa é descrita com o fluxo de dados.
 
-A arquitetura foi pensada com uma abordagem **data-first**, priorizando a estruturação e a disponibilização de dados antes da implementação de modelos de recomendação. 
+🔵 2.1 Ingestão — Web Scraper (scripts/scraper.py)
 
-O sistema segue um pipeline organizado da seguinte forma:
+A etapa de ingestão é responsável por capturar dados brutos diretamente da fonte externa (books.toscrape.com). Este é o ponto inicial do pipeline.
 
-**Ingestão → Processamento → Armazenamento → API → Consumo**
+🎯 Responsabilidades da etapa de ingestão
 
-Cada etapa é tratada isoladamente, permitindo evolução independente, substituição tecnológica e escalabilidade progressiva sem impacto direto nas demais etapas.
+O BookScraper executa um fluxo completo de extração:
 
-Essa separação garante que o projeto possa evoluir de uma solução simples para uma plataforma de dados e Machine Learning mais robusta ao longo do tempo.
+*Descoberta da paginação*
 
----
+- Acessa a primeira página do catálogo (page-1.html)
+- Identifica o total de páginas via HTML (ul.pager)
+- Registra last_page para controlar o loop de scraping
 
-## 3. Pipeline de Dados de Ponta a Ponta
+Isso permite navegar de forma dinâmica mesmo se o site aumentar/deixar de exibir produtos.
 
-### 3.1 Ingestão de Dados
+*Coleta de URLs individuais de livros*
 
-A camada de ingestão é responsável por coletar dados de livros a partir de fontes externas públicas (Books to Scrape), através de técnicas de web scraping.
+Para cada página:
+- Envia requisição HTTP com cabeçalho (User-Agent)
+- Faz parsing do HTML com BeautifulSoup
+- Extrai links relativos (href) de cada <article class="product_pod">
 
-Principais características dessa etapa:
+O resultado é uma lista _books_urls com todos os livros do site.
 
-- Executada de forma independente da API
-- Não depende de requisições de usuários finais
-- Pode ser acionada manualmente ou por agendamento
-- Preparada para suportar múltiplas fontes no futuro
+*Extração de metadados de cada livro*
 
-A decisão de desagregar a ingestão da API evita sobrecarga no serviço de consumo e garante maior controle sobre a qualidade e a frequência de atualização dos dados.
+Para cada URL individual, realiza: 
+- Leitura da página detalhada do livro
+- Extração dos campos: Título, Preço bruto, Moeda, Preço em centavos, RatingClasse, Categoria, URL da Imagem.
 
----
+*Padronização e limpeza dos dados*
 
-### 3.2 Processamento e Normalização
+Antes da persistência:
+- Conversão de moeda → currency code internacional
+- Conversão de preços → inteiros em centavos
+- Tratamento de campos opcionais (rating, img_url, category)
+- Garantia de limpeza (strip(), validações básicas)
 
-Após a ingestão, os dados brutos passam por uma etapa de processamento responsável por:
+*Persistência via DataStorage*
 
-- Limpeza de dados inconsistentes ou incompletos
-- Padronização de campos (autores, categorias)
-- Normalização estrutural do dataset
-- Validação básica de integridade
+O scraper é projetado para funcionar com qualquer mecanismo de persistência, por meio de uma interface externa (DataStorage). 
+No projeto atual, usamos CSVWriter. 
+Grava os dados estruturados em: /data/books.csv.
 
-Nesta fase, optamos por aplicar **apenas transformações essenciais**, evitando engenharia de atributos antecipada. Essa decisão preserva a flexibilidade analítica para cientistas de dados e engenheiros de Machine Learning, que poderão definir transformações específicas conforme o modelo utilizado.
+O CSV será o dataset usado pelas etapas posteriores.
 
----
+Tecnologias utilizadas
+- Requests → comunicação HTTP
+- BeautifulSoup → parsing de HTML
+- Regex → normalização de preço/moeda
+- Pandas (indiretamente) → posteriormente usado na leitura do CSV
 
-### 3.3 Armazenamento de Dados
+Resultado da Etapa
 
-Os dados processados são armazenados em um formato CSV adequado para consumo analítico e treinamento de modelos de Machine Learning. 
+📄 data/books.csv
 
-Características arquiteturais dessa camada:
+## 3. 🧬 Arquitetura de Escalabilidade Futura
 
-- Estrutura desacoplada da API
-- Formato substituível
-- Possibilidade de evolução tecnológica
+A arquitetura do Book Sommelier API foi projetada pensando não apenas no funcionamento atual, mas também em sua evolução natural à medida que o volume de dados cresce, novos requisitos surgem e aplicações de machine learning passam a consumir os dados disponibilizados. O sistema adota uma postura modular, permitindo que cada parte da solução possa ser substituída, ampliada ou reorganizada sem a necessidade de reescrever o projeto do zero.
 
-Inicialmente, o armazenamento pode ser simples (ex.: arquivos estruturados), mas a arquitetura permite migração futura para bancos relacionais, NoSQL ou data warehouses sem impacto direto nas camadas superiores.
+A seguir, descrevemos cada eixo de escalabilidade previsto no desenho arquitetural.
 
----
+3.1 Escala Horizontal da API
 
-### 3.4 Exposição via API
+A camada de API foi pensada para suportar o modelo de escalabilidade horizontal, no qual múltiplas instâncias da aplicação rodam simultaneamente para absorver picos de demanda.
+Isso se torna possível graças ao empacotamento via Docker, que permite facilmente replicar o container da aplicação e executá-lo em diferentes provedores compatíveis com containers, como Render, Railway, Fly.io ou Kubernetes.
+Uma vez que múltiplas instâncias estejam rodando, um load balancer pode distribuir requisições entre elas de maneira uniforme, garantindo:
+- maior tolerância a falhas,
+- maior disponibilidade,
+- melhor desempenho,
+- isolamento de workloads pesadas.
 
-A API atua exclusivamente como uma **camada de acesso aos dados**, funcionando como conexão entre o pipeline de dados e os consumidores.
+A arquitetura também permite configurar workers independentes para dividir tarefas de forma eficiente — por exemplo, servir requisições síncronas enquanto processos mais caros são tratados em paralelo.
 
-Decisões arquiteturais importantes:
+3.2 Escalonamento do Pipeline
 
-- A API é stateless
-- Não realiza processamento pesado
-- Não executa lógica de Machine Learning
-- Apenas consulta e entrega dados estruturados
+Hoje, o fluxo do pipeline é simples e sequencial: scraping → CSV → importação para o banco.
+Essa estrutura é eficiente para pequenas e médias quantidades de dados, mas pode se tornar um gargalo à medida que novas fontes, volumes maiores ou múltiplos scrapers forem adicionados.
+Para o futuro, o pipeline pode ser evoluído para um modelo distribuído e altamente escalável:
+Scraper → FILA (Kafka/RabbitMQ) → Processador paralelo → Banco → API → ML
 
-Essa estrutura permite que a API seja escalada horizontalmente e versionada sem afetar o pipeline de ingestão ou processamento.
+Nesse formato:
+O Scraper envia mensagens para um barramento assíncrono (Kafka, RabbitMQ).
+Consumidores paralelos processam cada item individualmente, permitindo ingestão massiva.
+O banco é alimentado em fluxo contínuo.
+A API passa a servir dados atualizados em tempo real.
+Pipelines de ML recebem informações renovadas automaticamente.
 
----
+Esse desenho suporta múltiplos scrapers, maior throughput e velocidades de ingestão muito superiores, deixando o sistema pronto para cenários de Big Data.
 
-### 3.5 Consumo dos Dados
+3.3 Migração de CSV para Data Lake
 
-Os dados disponibilizados pela API podem ser consumidos por diferentes perfis:
+Embora o CSV seja ótimo para prototipagem, ele não escala bem quando surgem demandas relacionadas a:
+- alta volumetria,
+- versionamento de dados,
+- consultas avançadas,
+- integração com pipelines analíticos.
 
-- Cientistas de dados
-- Engenheiros de Machine Learning
-- Sistemas externos
-- Pipelines analíticos
+Por isso, prevê-se uma futura migração para formatos mais robustos como:
+- Parquet (compacto, colunar, otimizado),
+- ORC, ou mesmo para armazenamento distribuído como:
+a. Amazon S3,
+b. Google Cloud Storage,
+c. MinIO (self-hosted S3).
 
-A API elimina a necessidade de scraping direto por consumidores, centralizando a responsabilidade de coleta e padronização dos dados.
+Com isso, ferramentas como AWS Glue, Apache Spark ou Databricks podem processar grandes volumes em segundos, dando ao projeto um caminho claro para análises avançadas e engenharia de características para ML.
 
----
+3.4 Cache em Camadas
 
-## 4. Arquitetura Orientada à Escalabilidade
+Para evitar reprocessar consultas que mudam pouco (como top-rated, categorias ou estatísticas de overview), o sistema pode adicionar uma camada de cache como o Redis.
+Isso permite:
+- respostas quase instantâneas (milissegundos),
+- menor carga no banco,
+- escalabilidade mais barata,
+- ótima performance para dashboards e consumidores repetitivos.
 
-### 4.1 Princípios Arquiteturais
+3.5 Observabilidade Completa
 
-A arquitetura foi desenhada considerando evolução incremental, evitando refatorações significativas no futuro.
+À medida que a aplicação cresce, torna-se essencial ter visibilidade clara de seu comportamento. A arquitetura prevê adição de: 
+- logs estruturados em JSON (para análise no ELK/Datadog),
+- Prometheus para coletar métricas (latência, erros, throughput),
+- Grafana para dashboards e alertas,
+- OpenTelemetry para rastreamento distribuído entre API, banco, scrapers e pipelines.
 
-Os principais princípios adotados são:
+Com isso, qualquer anomalia é detectada rapidamente e as equipes conseguem observar o impacto de novas versões ou cargas elevadas.
 
-- Camadas desacopladas
-- Separação entre dados, API e modelos
-- Independência tecnológica entre componentes
-- Evolução progressiva do pipeline 
+## 4. 🧠 Cenário Real de Uso para Data Science & ML
 
----
+A arquitetura foi desenhada para servir como uma base sólida para pipelines de machine learning. Ela disponibiliza dados limpos, consistentes e padronizados, facilitando tarefas como modelagem, previsão e geração de recomendações.
+A seguir estão cenários reais de uso contemplados pela arquitetura.
 
-### 4.2 Escalabilidade por Camada
+4.1 Regressão de Preço
 
-#### Ingestão
+A API permite a criação de modelos que estimam o valor de um livro com base em múltiplas variáveis.
+Um cientista de dados pode usar atributos como: rating numérico, categoria, tokens do título extraídos (TF-IDF, Bag-of-Words), características da imagem de capa extraídas via CNNs, para treinar regressões ou modelos de boosting capazes de prever valor aproximado de um item.
 
-- Evolução para execução paralela
-- Inclusão de novas fontes de dados
-- Possibilidade de agendamento automático
+4.2 Sistemas de Recomendação
 
-#### Processamento
+Com os dados de categoria, título e metadados, o sistema suporta recomendações usando:
+- similaridade textual entre títulos (cosine similarity),
+- embeddings NLP gerados por BERT, Sentence-BERT ou Word2Vec,
+- categorias correlacionadas,
+- métodos colaborativos como LightFM ou matrix factorization.
 
-- Migração para pipelines distribuídos
-- Suporte a processamento em batch ou streaming
-- Possibilidade de validações mais avançadas
+Isso permite construir um “Sommelier de Livros”, sugerindo ao usuário obras que combinam com seu gosto.
 
-#### Armazenamento
+4.3 Análise de Mercado
 
-- Migração para bancos de dados escaláveis
-- Separação entre dados operacionais e analíticos
-- Suporte a grande volume de dados
+A camada de insights expõe informações prontas para:
+- comparar preços por categoria,
+- entender a distribuição de avaliações,
+- identificar livros premium vs populares,
+- acompanhar variações temporalizadas do catálogo (futuro).
 
-#### API
+Esses dados podem alimentar dashboards ou análises exploratórias.
 
-- Escala horizontal com balanceamento de carga
-- Versionamento de endpoints
-- Controle de acesso e autenticação
+4.4 API de Feature Store
 
----
+A arquitetura prevê a criação de endpoints futuros como:
+/api/v2/features/book/<id>
 
-## 5. Cenários de Uso para Dados e Machine Learning
+Essa API entregaria vetores de características pré-calculadas (ex.: embedding do título, categoria one-hot, preço normalizado).
+Tais vetores podem ser diretamente consumidos por modelos de ML, economizando tempo e padronizando o fluxo.
 
-### 5.1 Cientistas de Dados
+## 5. 🤖 Plano de Integração com Modelos de ML
+A arquitetura prevê quatro estágios de maturidade para integração de machine learning:
 
-- Exploração e análise dos dados
-- Avaliação de qualidade e consistência
-- Criação de datasets para treinamento e validação
-- Experimentação de estratégias de recomendação
+5.1 Estágio 1 — Preparação dos Dados
 
----
+Criar um diretório /ml e consolidar datasets com:
+Pythonimport pandas as pddf = pd.read_csv("data/books.csv")Mostrar mais linhas
+Aqui acontecem:
+- limpeza adicional,
+- geração de features,
+- splits de treino/validação.
 
-### 5.2 Engenheiros de Machine Learning
 
-- Consumo de dados padronizados para treinamento
-- Reprodutibilidade de experimentos
-- Integração com pipelines de Machine Learning
-- Preparação para processamento em lote e serviço em tempo real 
+5.2 Estágio 2 — Treinamento
 
----
+Modelos recomendados:
+- RandomForest — fácil de treinar, ótimo baseline para regressão.
+- XGBoost/LightGBM — alta performance para ranking e regressão.
+- BERT/Sentence-BERT — representações semânticas para títulos.
+- LightFM — recomendação colaborativa.
 
-### 5.3 Sistemas Externos
 
-- Integração com sistemas de busca ou recomendação
-- Consumo de dados estruturados via API
-- Uso da API como serviço provedor de dados 
+5.3 Estágio 3 — Deploy de Modelos na API
 
----
+A API pode ganhar endpoints como:
+POST /api/v2/predictions/price
+POST /api/v2/recommendations
 
+Nesses endpoints, o modelo carregado em memória recebe features e devolve a inferência.
 
-## 6. Plano de Integração com Machine Learning
+5.4 Estágio 4 — MLOps
 
-### 6.1 Curto Prazo
+Para produção, o ciclo completo incluiria:
+- monitoramento de drift,
+- versionamento de modelos,
+- benchmark automático,
+- reprocessamento de dados,
+- Feature Store compartilhada.
 
-- Uso da API para geração de datasets offline
-- Implementação de modelos tradicionais de recomendação
-- Avaliação de métricas básicas de desempenho
- 
----
+## 6. 📦 Componentes Críticos do Sistema
+O BookScraper é responsável pela coleta de páginas e extração dos campos brutos. O CSVWriter atua como camada de persistência intermediária, gravando os dados em CSV. O BookImportService realiza a leitura do arquivo, normaliza dados e evita duplicidades antes de inserir no banco. O BookRepository fornece abstrações de acesso ao banco via SQLAlchemy, enquanto o Modelo Book representa a entidade persistida. O Books Blueprint expõe a API pública principal e o Insights Blueprint concentra endpoints analíticos em Pandas. O Dockerfile empacota a aplicação como container, e o docker-compose orquestra o ambiente com API e Postgres. Por fim, o Alembic controla a evolução do schema do banco.
 
+## 7. 📚 Tecnologias e Decisões Arquiteturais
+A solução utiliza Python, Flask com Blueprints, SQLAlchemy com PostgreSQL, Requests e BeautifulSoup para scraping, Pandas para análises, Docker e docker-compose para infraestrutura e Alembic para migrações. O CSV funciona como fonte intermediária simples e eficiente.
 
-### 6.2 Médio Prazo
+## 8. 🧾 Conclusão
+A arquitetura do Book Sommelier API é modular, extensível e preparada para o futuro. Ela separa claramente scraping, processamento, API e análise, servindo tanto aplicações quanto cientistas de dados. O design facilita escalabilidade, adição de novos scrapers, criação de novas features e integração com pipelines de machine learning e MLOps.
 
-- Criação de endpoints especializados para features
-- Geração de embeddings a partir de textos
-- Suporte a múltiplas versões de datasets
-- Experimentação com diferentes algoritmos
 
----
 
-### 6.3 Longo Prazo
-
-- Deploy de modelos como serviços independentes
-- Integração de inferência online
-- Introdução de feature stores
-- Monitoramento de modelos e dados
-
-
----
-
-## 7. Resumo das Decisões Arquiteturais
-
-
-- Pipeline de dados definido antes dos modelos
-- Transformações mínimas no estágio inicial
-- Arquitetura preparada para evolução em ML
-- Escalabilidade considerada desde o início
-
----
-## 8. Diagrama de Arquitetura
-
-```mermaid
-flowchart LR
-    A[Fonte Externa de Dados]
-    B[Camada de Ingestão\nWeb Scraping]
-    C[Processamento e Normalização]
-    D[Armazenamento Estruturado]
-    E[API REST]
-    F[Consumidores de Dados]
-    G[Modelos de Machine Learning]
-
-    A --> B
-    B --> C
-    C --> D
-    D --> E
-    E --> F
-    F --> G
