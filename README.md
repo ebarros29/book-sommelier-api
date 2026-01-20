@@ -27,9 +27,11 @@ flowchart LR
 
 **Pipeline:** Ingestion → Processing → API → Consumption
 
+For more details please refer to the [detailed architecture document](./docs/architecture/ARCHITECTURE.md).
+
 ---
 
-## 📂 Basic Project Structure
+## Basic Project Structure
 
 ```text
 .
@@ -50,7 +52,7 @@ flowchart LR
 
 ---
 
-## ⚙️ Installation
+## Installation
 
 ```bash
 # Clone repository
@@ -187,7 +189,7 @@ The API was designed to support future ML workflows:
 
 ---
 
-## 🌍 Deployment
+## Deployment
 
 TBD
 
