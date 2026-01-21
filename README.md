@@ -191,7 +191,9 @@ The API was designed to support future ML workflows:
 
 ## Deployment
 
-TBD
+The API has been deployed on Render.
+
+URL: https://book-sommelier-api.onrender.com/api/v1/books
 
 ---
 
